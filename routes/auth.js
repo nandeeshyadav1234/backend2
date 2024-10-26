@@ -49,6 +49,7 @@ router.post('/signin', function (req, res) {
                     message: 'Authentication failed. User not found.',
                 });
             }
+
             user.comparePassword(req.body.password, (err, isMatch) => {
                 if (isMatch && !err) {
                     var token = jwt.sign(JSON.parse(JSON.stringify(user)), 'nodeauthsecret', {
@@ -57,10 +58,20 @@ router.post('/signin', function (req, res) {
                     jwt.verify(token, 'nodeauthsecret', function (err, data) {
                         console.log(err, data);
                     })
+                    const role = Role.findOne({
+                        where: { id: user.role_id }
+                    }).then((role) => {
                     res.json({
                         success: true,
-                        token: 'JWT ' + token
+                        token: 'JWT ' + token,
+                        user: {
+                            email: user.email,
+                            fullname: user.fullname,
+                            phone: user.phone,
+                            role_name: role.role_name
+                        }
                     });
+                })
                 } else {
                     res.status(401).send({
                         success: false,
