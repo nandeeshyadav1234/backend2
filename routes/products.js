@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models').Product;
+const Properties = require('../models').Properties;
+const Land = require('../models').Land;
 const passport = require('passport');
 require('../config/passport')(passport);
 const Helper = require('../utils/helper');
@@ -35,35 +37,85 @@ router.post('/', passport.authenticate('jwt', {
 });
 
 // Get List of Products
-router.get('/', passport.authenticate('jwt', {
-    session: false
-}), function (req, res) {
-    helper.checkPermission(req.user.role_id, 'product_get_all').then((rolePerm) => {
-        Product
-            .findAll()
-            .then((products) => res.status(200).send(products))
-            .catch((error) => {
-                res.status(400).send(error);
-            });
-    }).catch((error) => {
-        res.status(403).send(error);
+router.get('/', function (req, res) {
+    Properties.findAll({
+        attributes: [
+            'id', 
+            'name', 
+            'description', 
+            'amount', 
+            'city', 
+            'postalCode', 
+            'description', 
+            'images', 
+            'availability', 
+            'contactNo', 
+            'contatctEmail'
+        ], // Columns from Properties
+        include: [
+          {
+            model: Land,
+            as: 'landDetails', // Alias used in the association
+            attributes: [
+              'electricity',
+              'tapwater',
+              'size',
+              'nearestSchool',
+              'nearestRailway',
+              'nearestBusStop'
+            ], // Columns from Land
+            required: false, // Left join (include rows from Properties even if no matching Land entry exists)
+          },
+        ],
+      })
+      .then((products) => res.status(200).send(products))
+      .catch((error) => {
+        res.status(400).send(error);
     });
 });
 
 // Get Product by ID
-router.get('/:id', passport.authenticate('jwt', {
-    session: false
-}), function (req, res) {
-    helper.checkPermission(req.user.role_id, 'product_get').then((rolePerm) => {
-        Product
-            .findByPk(req.params.id)
-            .then((product) => res.status(200).send(product))
-            .catch((error) => {
-                res.status(400).send(error);
-            });
-    }).catch((error) => {
-        res.status(403).send(error);
-    });
+router.get('/:id', function (req, res) {
+    Properties
+        .findByPk(req.params.id, {
+            attributes: [
+                'id', 
+                'name', 
+                'description', 
+                'amount', 
+                'city', 
+                'postalCode', 
+                'description', 
+                'images', 
+                'availability', 
+                'contactNo', 
+                'contatctEmail'
+            ], // Columns from Properties
+            include: [
+                {
+                    model: Land,
+                    as: 'landDetails', // Ensure this matches the alias used in the Properties model
+                    attributes: [
+                        'electricity',
+                        'tapwater',
+                        'size',
+                        'nearestSchool',
+                        'nearestRailway',
+                        'nearestBusStop',
+                    ],
+                },
+            ],
+        })
+        .then((product) => {
+            if (!product) {
+                return res.status(404).send({ message: 'Property not found' });
+            }
+            res.status(200).send(product);
+        })
+        .catch((error) => {
+            console.error('Error fetching property:', error);
+            res.status(400).send(error);
+        });
 });
 
 // Update a Product
@@ -140,5 +192,9 @@ router.delete('/:id', passport.authenticate('jwt', {
         res.status(403).send(error);
     });
 });
-
+router.get('/productList', function (req, res) {
+    res.status(200).send({
+        'message': 'Product not found'
+    });
+  });
 module.exports = router;
