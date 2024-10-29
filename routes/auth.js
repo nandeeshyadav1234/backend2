@@ -36,51 +36,52 @@ router.post('/signup', function (req, res) {
     }
 });
 
-router.post('/signin', function (req, res) {
-    User
-        .findOne({
-            where: {
-                email: req.body.email
-            }
-        })
-        .then((user) => {
-            if (!user) {
-                return res.status(401).send({
-                    message: 'Authentication failed. User not found.',
-                });
-            }
+router.post('/signin', async (req, res) => {
+    try {
+        const user = await User.findOne({
+            attributes: ['email', 'password', 'fullname', 'phone', 'role_id'],
+            where: { email: req.body.email }
+        });
 
-            user.comparePassword(req.body.password, (err, isMatch) => {
-                if (isMatch && !err) {
-                    var token = jwt.sign(JSON.parse(JSON.stringify(user)), 'nodeauthsecret', {
-                        expiresIn: 86400 * 30
-                    });
-                    jwt.verify(token, 'nodeauthsecret', function (err, data) {
-                        console.log(err, data);
-                    })
-                    const role = Role.findOne({
-                        where: { id: user.role_id }
-                    }).then((role) => {
-                    res.json({
-                        success: true,
-                        token: 'JWT ' + token,
-                        user: {
-                            email: user.email,
-                            fullname: user.fullname,
-                            phone: user.phone,
-                            role_name: role.role_name
-                        }
-                    });
-                })
-                } else {
-                    res.status(401).send({
-                        success: false,
-                        msg: 'Authentication failed. Wrong password.'
-                    });
-                }
-            })
-        })
-        .catch((error) => res.status(400).send(error));
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                msg: 'Authentication failed. User not found.'
+            });
+        }
+
+        const isMatch = await user.comparePassword(req.body.password);
+
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                msg: 'Authentication failed. Wrong password.'
+            });
+        }
+
+        const token = jwt.sign(JSON.parse(JSON.stringify(user)), 'nodeauthsecret', { expiresIn: 86400 * 30 });
+
+        const role = await Role.findOne({ where: { id: user.role_id } });
+
+        return res.json({
+            success: true,
+            token: 'JWT ' + token,
+            user: {
+                email: user.email,
+                fullname: user.fullname,
+                phone: user.phone,
+                role_name: role?.role_name || 'No role assigned'
+            }
+        });
+        
+    } catch (error) {
+        console.error('Sign-in error:', error);
+        return res.status(500).json({
+            success: false,
+            msg: 'An error occurred during authentication.'
+        });
+    }
 });
+
 
 module.exports = router;

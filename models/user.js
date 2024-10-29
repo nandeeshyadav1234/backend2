@@ -1,22 +1,19 @@
 'use strict';
-const {
-  Model
-} = require('sequelize');
+const { Model } = require('sequelize');
 const bcrypt = require('bcryptjs');
 
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
     static associate(models) {
-      User.belongsTo(models.Role, {
-        foreignKey: 'role_id'
-      });
+      User.belongsTo(models.Role, { foreignKey: 'role_id' });
     }
-  };
+
+    // Async version of comparePassword for compatibility with async/await syntax
+    async comparePassword(passw) {
+      return bcrypt.compare(passw, this.password);
+    }
+  }
+
   User.init({
     role_id: DataTypes.INTEGER,
     email: {
@@ -32,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false
     },
-    phone:  {
+    phone: {
       type: DataTypes.STRING,
       allowNull: true
     }
@@ -40,18 +37,14 @@ module.exports = (sequelize, DataTypes) => {
     sequelize,
     modelName: 'User',
   });
-  User.beforeSave(async (user, options) => {
+
+  // Asynchronous password hashing
+  User.beforeSave(async (user) => {
     if (user.password) {
-      user.password = bcrypt.hashSync(user.password, bcrypt.genSaltSync(10), null);
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(user.password, salt);
     }
   });
-  User.prototype.comparePassword = function (passw, cb) {
-    bcrypt.compare(passw, this.password, function (err, isMatch) {
-        if (err) {
-            return cb(err);
-        }
-        cb(null, isMatch);
-    });
-  };
+
   return User;
 };

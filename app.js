@@ -11,6 +11,8 @@ var rolesRouter = require('./routes/roles');
 var permsRouter = require('./routes/permissions');
 var authRouter = require('./routes/auth');
 var productRouter = require('./routes/products');
+const nodemailer = require('nodemailer');
+const sendingEmailRoutes = require('./routes/sendingEmail'); // Assuming this is the file for your send-email route
 
 var app = express();
 app.use(cors({
@@ -29,6 +31,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/sendingEmail', sendingEmailRoutes);
 app.use('/api/v1/users', usersRouter);
 app.use('/api/v1/roles', rolesRouter);
 app.use('/api/v1/permissions', permsRouter);
