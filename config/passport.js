@@ -9,6 +9,7 @@ module.exports = function(passport) {
     jwtFromRequest: ExtractJwt.fromAuthHeaderWithScheme('JWT'),
     secretOrKey: 'nodeauthsecret',
   };
+  console.log(opts);
   passport.use('jwt', new JwtStrategy(opts, function(jwt_payload, done) {
     User
       .findByPk(jwt_payload.id)

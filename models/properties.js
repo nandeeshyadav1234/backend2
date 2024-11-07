@@ -19,6 +19,7 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'property_id', // The foreign key in Land model that references Properties
       as: 'landDetails', // This alias is important for eager loading
     });
+    Properties.belongsTo(models.User, { foreignKey: 'user_id', as: 'userDetails' });
   };
 
   return Properties;

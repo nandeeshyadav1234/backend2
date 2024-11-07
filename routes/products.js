@@ -3,6 +3,7 @@ const router = express.Router();
 const Product = require('../models').Product;
 const Properties = require('../models').Properties;
 const Land = require('../models').Land;
+const User = require('../models').User;
 const passport = require('passport');
 require('../config/passport')(passport);
 const Helper = require('../utils/helper');
@@ -47,6 +48,10 @@ router.get('/', function (req, res) {
             'city', 
             'postalCode', 
             'description', 
+            'user_id',
+            'latitude',
+            'longitude',
+            'type',
             'images', 
             'availability', 
             'contactNo', 
@@ -63,6 +68,14 @@ router.get('/', function (req, res) {
               'nearestSchool',
               'nearestRailway',
               'nearestBusStop'
+            ], // Columns from Land
+            required: false, // Left join (include rows from Properties even if no matching Land entry exists)
+          },
+          {
+            model: User,
+            as: 'userDetails', // Alias used in the association
+            attributes: [
+              'fullname'
             ], // Columns from Land
             required: false, // Left join (include rows from Properties even if no matching Land entry exists)
           },

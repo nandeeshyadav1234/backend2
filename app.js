@@ -4,6 +4,7 @@ const cors = require('cors');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+const passport = require('passport');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -15,6 +16,8 @@ const nodemailer = require('nodemailer');
 const sendingEmailRoutes = require('./routes/sendingEmail'); // Assuming this is the file for your send-email route
 
 var app = express();
+app.use(passport.initialize());
+
 app.use(cors({
   origin: 'http://localhost:3000'
 }));

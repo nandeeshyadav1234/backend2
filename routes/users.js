@@ -37,6 +37,136 @@ router.post('/', passport.authenticate('jwt', {
   });
 });
 
+router.post('/addUser', async (req, res) => {
+  const {
+    fullname,
+    email,
+    phone,
+    password,
+    avatar = 'default.jpg',
+    description,
+    address,
+    city,
+    gender,
+    birthday,
+    role, // Role parameter to determine role_id
+  } = req.body;
+
+  try {
+    // Fetch role_id from Roles table based on the role name
+    const roleRecord = await Role.findOne({ where: { role_name: role } });
+    if (!roleRecord) {
+      return res.status(404).json({ error: `Role '${role}' not found` });
+    }
+
+    // Use fetched role_id in the vendor creation
+    const newVendor = await User.create({
+      fullname,
+      email,
+      phone,
+      password,
+      avatar,
+      description,
+      address,
+      city,
+      role_id: roleRecord.id, // Set role_id to the ID found in Roles table
+      gender,
+      birthday,
+    });
+
+    res.status(201).json({
+      message: 'Vendor added successfully!',
+      vendor: newVendor,
+    });
+  } catch (error) {
+    console.error('Error adding vendor:', error);
+    res.status(500).json({ error: 'Failed to add vendor' });
+  }
+});
+
+router.get('/', function(re, res) {
+User.findAll({
+  where: {
+    role_id: 2
+  }
+}) .then((users) => res.status(201).send(users));
+});
+const bcrypt = require('bcryptjs');
+
+// Update Vendor
+router.put('/updateUser/:id', async (req, res) => {
+  try {
+    // Check if user has permission to update vendors
+    // await helper.checkPermission(req.user.role_id, 'user_update');
+
+    const vendorId = req.params.id;
+    const {
+      fullname,
+      email,
+      phone,
+      password,
+      avatar,
+      description,
+      address,
+      city,
+      gender,
+      birthday,
+    } = req.body;
+
+    const vendor = await User.findByPk(vendorId);
+
+    if (!vendor) {
+      return res.status(404).json({ error: 'Vendor not found' });
+    }
+
+    const updatedData = {
+      fullname,
+      email,
+      phone,
+      avatar,
+      description,
+      address,
+      city,
+      gender,
+      birthday,
+    };
+
+    // If a new password is provided, hash it before updating
+    if (password) {
+      updatedData.password = await bcrypt.hash(password, 10);
+    }
+
+    await vendor.update(updatedData);
+
+    res.status(200).json({ message: 'Vendor updated successfully', vendor });
+  } catch (error) {
+    console.error('Error updating vendor:', error);
+    res.status(500).json({ error: 'Failed to update vendor' });
+  }
+});
+
+// Delete Vendor
+router.delete('/deleteUser/:id', async (req, res) => {
+  try {
+    // Check if user has permission to delete vendors
+    // await helper.checkPermission(req.user.role_id, 'user_delete');
+
+    const vendorId = req.params.id;
+    const vendor = await User.findByPk(vendorId);
+
+    if (!vendor) {
+      return res.status(404).json({ error: 'Vendor not found' });
+    }
+
+    await vendor.destroy();
+
+    res.status(200).json({ message: 'Vendor deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting vendor:', error);
+    res.status(500).json({ error: 'Failed to delete vendor' });
+  }
+});
+
 // Get List of Users
 router.get('/', passport.authenticate('jwt', {
   session: false
@@ -63,6 +193,33 @@ router.get('/', passport.authenticate('jwt', {
   }).catch((error) => {
     res.status(403).send(error);
   });
+});
+// Get List of Vendors (role_id = 2)
+router.get('/getUsers', async (req, res) => {
+  try {
+    // Check if user has permission to view vendors
+    // await helper.checkPermission(req.user.role_id, 'user_get_all');
+
+    // Fetch vendors with role_id = 2
+    const vendors = await User.findAll({
+      include: [
+        {
+          model: Role,
+          include: [
+            {
+              model: Permission,
+              as: 'permissions'
+            }
+          ]
+        }
+      ]
+    });
+
+    res.status(200).json(vendors);
+  } catch (error) {
+    console.error('Error fetching vendors:', error);
+    res.status(500).json({ error: 'Failed to fetch vendors' });
+  }
 });
 
 // Get User by ID

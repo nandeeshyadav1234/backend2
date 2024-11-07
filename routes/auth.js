@@ -59,7 +59,7 @@ router.post('/signin', async (req, res) => {
             });
         }
 
-        const token = jwt.sign(JSON.parse(JSON.stringify(user)), 'nodeauthsecret', { expiresIn: 86400 * 30 });
+        const token = jwt.sign(JSON.parse(JSON.stringify(user)), 'nodeauthsecret', { expiresIn: '10h' });
 
         const role = await Role.findOne({ where: { id: user.role_id } });
 
