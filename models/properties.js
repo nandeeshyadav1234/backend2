@@ -7,7 +7,7 @@ module.exports = (sequelize, DataTypes) => {
     postalCode: DataTypes.STRING,
     user_id: DataTypes.DECIMAL,
     type: DataTypes.TEXT,
-    images: DataTypes.TEXT,
+    images: DataTypes.ARRAY(DataTypes.STRING),
     availability: DataTypes.DECIMAL,
     contactNo: DataTypes.DECIMAL,
     contatctEmail: DataTypes.TEXT

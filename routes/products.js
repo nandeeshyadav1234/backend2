@@ -8,34 +8,89 @@ const passport = require('passport');
 require('../config/passport')(passport);
 const Helper = require('../utils/helper');
 const helper = new Helper();
+const jwt = require('jsonwebtoken');
+const multer = require('multer');
 
-// Create a new Product
-router.post('/', passport.authenticate('jwt', {
-    session: false
-}), function (req, res) {
-    helper.checkPermission(req.user.role_id, 'product_add').then((rolePerm) => {
-        if (!req.body.prod_name || !req.body.prod_description || !req.body.prod_image || !req.body.prod_price) {
-            res.status(400).send({
-                msg: 'Please pass Product name, description, image or price.'
-            })
-        } else {
-            Product
-                .create({
-                    prod_name: req.body.prod_name,
-                    prod_description: req.body.prod_description,
-                    prod_image: req.body.prod_image,
-                    prod_price: req.body.prod_price
-                })
-                .then((product) => res.status(201).send(product))
-                .catch((error) => {
-                    console.log(error);
-                    res.status(400).send(error);
-                });
-        }
-    }).catch((error) => {
-        res.status(403).send(error);
-    });
+const storage = multer.diskStorage({
+  destination: './uploads',  // Make sure the 'uploads' folder exists
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
 });
+  
+  const upload = multer({ storage });
+  
+  router.post('/upload', upload.array('images', 10), (req, res) => {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ message: 'No files uploaded' });
+      }
+  
+      // Map over the files array and generate URLs for each file
+      const imageUrls = req.files.map((file) => `/uploads/${file.filename}`);
+  
+      res.status(200).json({
+        message: 'Images uploaded successfully!',
+        imageUrls, // Array of URLs for the uploaded images
+      });
+    } catch (error) {
+      console.error('Error handling image upload:', error);
+      res.status(500).json({ message: 'Image upload failed' });
+    }
+  });
+// Create a new Product
+router.post('/', async (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Get token from "Bearer <token>"
+
+  if (!token) {
+    return res.status(401).send({ msg: 'Token missing or invalid' });
+  }
+    try {
+  
+      // Basic request validation
+      const { name, description, amount, type, city, postalCode, availability, electricity, tapWater, size, nearestSchool, nearestBus, nearestHospital, nearestRailway, images } = req.body;
+      if (!name || !description || !amount) {
+        return res.status(400).send({
+          msg: 'Please provide all required fields: Product name, description, image, and price.'
+        });
+      }
+      const userDetails = jwt.verify(authHeader.split(' ')[2], 'nodeauthsecret');
+      console.log('userDetails', userDetails);
+      // Create product
+      const property = await Properties.create({
+        name,
+        description,
+        amount,
+        user_id:userDetails.id,
+        type,
+        city,
+        postalCode,
+        availability,
+        images
+      });
+      const land = await Land.create({
+        electricity,
+        tapwater:tapWater,
+        size,
+        property_id:property.id,
+        nearestSchool,
+        nearestBusStop:nearestBus,
+        nearestRailway,
+        nearestHospital
+      });
+      // Send success response
+      res.status(201).send(property);
+  
+    } catch (error) {
+      if (error.name === 'PermissionError') {
+        res.status(403).send({ msg: 'You do not have permission to add products.' });
+      } else {
+        console.error(error);
+        res.status(500).send({ msg: 'An error occurred while creating the product.' });
+      }
+    }
+  });
 
 // Get List of Products
 router.get('/', function (req, res) {
@@ -49,13 +104,9 @@ router.get('/', function (req, res) {
             'postalCode', 
             'description', 
             'user_id',
-            'latitude',
-            'longitude',
             'type',
             'images', 
-            'availability', 
-            'contactNo', 
-            'contatctEmail'
+            'availability'
         ], // Columns from Properties
         include: [
           {
@@ -67,7 +118,9 @@ router.get('/', function (req, res) {
               'size',
               'nearestSchool',
               'nearestRailway',
-              'nearestBusStop'
+              'nearestBusStop',
+              'nearestHospital',
+              'negotiable'
             ], // Columns from Land
             required: false, // Left join (include rows from Properties even if no matching Land entry exists)
           },
@@ -75,7 +128,9 @@ router.get('/', function (req, res) {
             model: User,
             as: 'userDetails', // Alias used in the association
             attributes: [
-              'fullname'
+              'fullname',
+              'id',
+              'email'
             ], // Columns from Land
             required: false, // Left join (include rows from Properties even if no matching Land entry exists)
           },

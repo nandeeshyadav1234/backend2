@@ -21,6 +21,7 @@ app.use(passport.initialize());
 app.use(cors({
   origin: 'http://localhost:3000'
 }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

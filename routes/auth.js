@@ -39,7 +39,7 @@ router.post('/signup', function (req, res) {
 router.post('/signin', async (req, res) => {
     try {
         const user = await User.findOne({
-            attributes: ['email', 'password', 'fullname', 'phone', 'role_id'],
+            attributes: ['id','email', 'password', 'fullname', 'phone', 'role_id'],
             where: { email: req.body.email }
         });
 
@@ -62,11 +62,12 @@ router.post('/signin', async (req, res) => {
         const token = jwt.sign(JSON.parse(JSON.stringify(user)), 'nodeauthsecret', { expiresIn: '10h' });
 
         const role = await Role.findOne({ where: { id: user.role_id } });
-
+        console.log('user',user);
         return res.json({
             success: true,
             token: 'JWT ' + token,
             user: {
+                id: user.id,
                 email: user.email,
                 fullname: user.fullname,
                 phone: user.phone,
